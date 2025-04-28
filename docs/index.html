@@ -1,101 +1,79 @@
-
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IA Mestre em Compras - Grupo Armando Pneus</title>
-
-    <!-- Estilos -->
+    <title>IA Mestre em Compras - Grupo de Peças e Pneus</title>
     <link rel="stylesheet" href="style.css">
-
-    <!-- Chart.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
-
-    <!-- Google Sheets Connector -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <script src="google-sheets-connector.js"></script>
 </head>
-
 <body>
-    <!-- Header -->
     <header>
         <div class="logo">🧠 IA Mestre em Compras</div>
         <div class="user-info">
-            <span id="dataAtualizacao">Atualizado: --/--/----</span>
-            <button id="btnAtualizar">🔄 Atualizar</button>
+            <span>Atualizado: --/--/----</span>
+            <button id="btnAtualizar">🔄 Atualizar Dados</button>
         </div>
     </header>
-
-    <!-- Layout Principal -->
     <div class="container">
-        <aside class="sidebar">
+        <div class="sidebar">
             <div class="menu-item active" data-page="dashboard">📊 Dashboard</div>
-            <div class="menu-item" data-page="sugestoes">🛒 Sugestões</div>
+            <div class="menu-item" data-page="sugestoes-compra">🛒 Sugestões</div>
             <div class="menu-item" data-page="transferencias">🔄 Transferências</div>
             <div class="menu-item" data-page="oportunidades">💰 Oportunidades</div>
             <div class="menu-item" data-page="fornecedores">🏭 Fornecedores</div>
-            <div class="menu-item" data-page="historico">📋 Histórico</div>
-        </aside>
-
-        <main class="main-content" id="main-content">
-            <!-- Conteúdo dinâmico será carregado aqui -->
-        </main>
+        </div>
+        <div class="main-content" id="main-content"></div>
     </div>
-
-    <!-- Modal -->
-    <div class="modal" id="modalDetalhes">
+    <div class="loading" id="loading">🔄 Carregando...</div>
+    <div class="modal" id="modalDetalhesItem">
         <div class="modal-content">
-            <span class="close" onclick="fecharModal()">&times;</span>
-            <div id="modal-body"></div>
+            <div class="modal-header">
+                <div class="modal-title">Detalhes</div>
+                <div class="modal-close" onclick="fecharModal('modalDetalhesItem')">&times;</div>
+            </div>
+            <div class="modal-body" id="modalDetalhesItemBody"></div>
         </div>
     </div>
-
     <script>
         document.addEventListener('DOMContentLoaded', async function() {
             GoogleSheetsConnector.inicializar();
             await carregarDadosIniciais();
-            inicializarEventos();
+            initEventListeners();
         });
-
         async function carregarDadosIniciais() {
             try {
+                document.getElementById('loading').style.display = 'flex';
                 const vendas = await GoogleSheetsConnector.obterDadosVendas();
                 const estoque = await GoogleSheetsConnector.obterDadosEstoque();
                 const nfEntrada = await GoogleSheetsConnector.obterDadosNFEntrada();
                 console.log("Dados carregados", { vendas, estoque, nfEntrada });
+                document.getElementById('loading').style.display = 'none';
             } catch (error) {
                 console.error("Erro carregando dados:", error);
-                alert("Erro ao carregar dados.");
+                document.getElementById('loading').style.display = 'none';
             }
         }
-
-        function inicializarEventos() {
+        function initEventListeners() {
             document.querySelectorAll('.menu-item').forEach(item => {
                 item.addEventListener('click', function() {
-                    mudarPagina(this.getAttribute('data-page'));
+                    const pageId = this.getAttribute('data-page');
+                    mudarPagina(pageId);
                 });
             });
-
             document.getElementById('btnAtualizar').addEventListener('click', async function() {
                 await carregarDadosIniciais();
-                document.getElementById('dataAtualizacao').innerText = `Atualizado: ${new Date().toLocaleString('pt-BR')}`;
             });
         }
-
-        function mudarPagina(page) {
+        function mudarPagina(pageId) {
             document.querySelectorAll('.menu-item').forEach(item => item.classList.remove('active'));
-            document.querySelector(`.menu-item[data-page="${page}"]`).classList.add('active');
-
-            document.getElementById('main-content').innerHTML = `<h1>${page.toUpperCase()}</h1><p>Conteúdo dinâmico aqui...</p>`;
+            document.querySelector(`.menu-item[data-page="${pageId}"]`).classList.add('active');
+            document.getElementById('main-content').innerHTML = `<h1>${pageId.replace('-', ' ').toUpperCase()}</h1>`;
         }
-
-        function abrirModal(conteudo) {
-            document.getElementById('modal-body').innerHTML = conteudo;
-            document.getElementById('modalDetalhes').style.display = 'block';
-        }
-
-        function fecharModal() {
-            document.getElementById('modalDetalhes').style.display = 'none';
+        function fecharModal(idModal) {
+            document.getElementById(idModal).classList.remove('active');
         }
     </script>
 </body>
