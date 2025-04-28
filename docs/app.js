@@ -1,3 +1,34 @@
+// Adicione isso ao início do app.js para diagnóstico
+console.log("Iniciando diagnóstico de conexão...");
+
+// Função para testar a conectividade com o Google Sheets
+async function testConnection() {
+  try {
+    console.log("Tentando conectar ao Google Sheets...");
+    const response = await fetch(GoogleSheetsConnector.urlBase + "?action=ping");
+    const data = await response.json();
+    console.log("Resposta do servidor:", data);
+    return data;
+  } catch (error) {
+    console.error("Erro ao conectar:", error);
+    document.body.innerHTML += `
+      <div style="position: fixed; top: 0; left: 0; right: 0; background: #e74c3c; color: white; padding: 10px; text-align: center;">
+        Erro de conexão: ${error.message}. Verifique o console para mais detalhes.
+      </div>
+    `;
+    return null;
+  }
+}
+
+// Executar teste de conexão
+testConnection().then(result => {
+  if (result && result.status === 'success') {
+    console.log("Conexão estabelecida com sucesso!");
+  } else {
+    console.error("Falha na conexão:", result);
+  }
+});
+
 /**
  * Script principal da aplicação IA Mestre em Compras
  * Gerencia a interface e integração com GoogleSheetsConnector
@@ -1308,3 +1339,43 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Exportar App para uso global
 window.App = App;
+
+// Adicione esta função ao app.js
+function activateEmergencyMode() {
+  console.log("Ativando modo de emergência...");
+  
+  // Remover loadings
+  document.querySelectorAll('.loading').forEach(el => el.style.display = 'none');
+  
+  // Mostrar mensagem ao usuário
+  const mainContent = document.querySelector('.main-content');
+  if (mainContent) {
+    mainContent.innerHTML = `
+      <div style="background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; padding: 20px; border-radius: 5px; margin-bottom: 20px;">
+        <h3>Modo de Emergência Ativado</h3>
+        <p>Não foi possível estabelecer conexão com o servidor de dados. Estamos operando no modo offline.</p>
+        <p>Por favor, verifique:</p>
+        <ul>
+          <li>Se o ID de implantação do Google Apps Script está correto</li>
+          <li>Se o Google Apps Script está publicado como aplicativo da web</li>
+          <li>Se as permissões de acesso ao Google Sheets estão configuradas corretamente</li>
+        </ul>
+        <button onclick="location.reload()" style="background: #721c24; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer;">
+          Tentar Novamente
+        </button>
+      </div>
+    `;
+  }
+}
+
+// Adicione um timeout para ativar o modo de emergência se não conseguir carregar os dados
+setTimeout(() => {
+  const loadingElements = document.querySelectorAll('.loading');
+  const isStillLoading = Array.from(loadingElements).some(el => 
+    el.style.display !== 'none' && el.classList.contains('active')
+  );
+  
+  if (isStillLoading) {
+    activateEmergencyMode();
+  }
+}, 10000); // 10 segundos
