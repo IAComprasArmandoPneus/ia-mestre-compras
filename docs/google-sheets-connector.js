@@ -8,7 +8,7 @@
 const GoogleSheetsConnector = {
   // Configurações e IDs das planilhas
   config: {
-    apiUrl: 'https://script.google.com/macros/s/AKfycbz19pu-nnEqRyDqMlBCm_KjcbhgU_qYB9nfx6dKSHC9qNCpJ8H04r8W-Rgv8ARIjVK3xg/exec',
+    apiUrl: 'https://script.google.com/macros/s/AKfycbyAgume_XQT7idBi8eBePUI2wljm53uNqtwrxY_fD3fjftAv91Rf2KCcYU0v0Lf2Qxvjg/exec',
     planilhas: {
       vendas: '1Wm9TdTPAMY89SgFz98kFlywkqJ41pWI_',
       estoque: '1HSsZtCU4S32X274CuFusOI-jTC1fKbl7',
