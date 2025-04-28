@@ -740,3 +740,15 @@ header {
         margin-top: 0.5rem;
     }
 }
+
+<style>
+  /* Estilos mínimos para fallback */
+  body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
+  .sidebar { width: 240px; background: #34495e; color: white; padding: 10px; position: fixed; height: 100%; }
+  .main-content { margin-left: 240px; padding: 20px; }
+  .menu-item { padding: 10px; margin: 5px 0; cursor: pointer; }
+  .menu-item.active { background: #2c3e50; }
+  .page-title { font-size: 24px; margin-bottom: 20px; }
+  .loading { color: #3498db; font-weight: bold; }
+</style>
+
