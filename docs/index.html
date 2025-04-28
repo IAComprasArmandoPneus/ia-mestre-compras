@@ -1,41 +1,558 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>IA Mestre em Compras</title>
-  <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IA Mestre em Compras</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
 </head>
 <body>
-  <header>
-    <div class="logo">🧠 IA Mestre em Compras</div>
-    <div class="user-info">
-      <span id="lastUpdate">Atualizado: --/--/----</span>
-      <button id="btnAtualizar">🔄 Atualizar Dados</button>
+    <header>
+        <div class="logo">
+            <span class="logo-icon"><i class="fas fa-robot"></i></span>
+            IA Mestre em Compras
+        </div>
+        <div class="user-info">
+            <span>Última atualização: --/--/---- --:--</span>
+            <button id="btnAtualizar" class="refresh-button">
+                <i class="fas fa-sync-alt"></i> Atualizar Dados
+            </button>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="sidebar">
+            <div class="menu-item active" data-page="dashboard">
+                <i class="menu-item-icon fas fa-tachometer-alt"></i>
+                <span>Dashboard</span>
+            </div>
+            <div class="menu-item" data-page="sugestoes-compra">
+                <i class="menu-item-icon fas fa-shopping-cart"></i>
+                <span>Sugestões de Compra</span>
+            </div>
+            <div class="menu-item" data-page="transferencias">
+                <i class="menu-item-icon fas fa-exchange-alt"></i>
+                <span>Transferências</span>
+            </div>
+            <div class="menu-item" data-page="oportunidades">
+                <i class="menu-item-icon fas fa-percentage"></i>
+                <span>Oportunidades</span>
+            </div>
+            <div class="menu-item" data-page="fornecedores">
+                <i class="menu-item-icon fas fa-industry"></i>
+                <span>Fornecedores</span>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <!-- Container para alertas -->
+            <div id="alert-container"></div>
+
+            <!-- Indicador de loading global -->
+            <div id="loading-global" class="loading">
+                <div class="loading-spinner"></div>
+                <div class="loading-text">Carregando dados...</div>
+            </div>
+
+            <!-- Página: Dashboard -->
+            <div class="page active" id="page-dashboard">
+                <h1 class="page-title">Dashboard</h1>
+
+                <div class="card-container">
+                    <div class="card">
+                        <div class="card-header">
+                            <i class="card-icon fas fa-exclamation-triangle"></i>
+                            Itens Críticos
+                        </div>
+                        <div class="stat">32</div>
+                        <p>Produtos que precisam de atenção imediata</p>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <i class="card-icon fas fa-exchange-alt"></i>
+                            Transferências Sugeridas
+                        </div>
+                        <div class="stat">18</div>
+                        <p>Movimentações entre estabelecimentos</p>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <i class="card-icon fas fa-percentage"></i>
+                            Oportunidades de Compra
+                        </div>
+                        <div class="stat">7</div>
+                        <p>Economia potencial em oportunidades</p>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <i class="card-icon fas fa-chart-line"></i>
+                            Desempenho Geral
+                        </div>
+                        <div class="stat">+14%</div>
+                        <p>Melhoria no índice de disponibilidade</p>
+                    </div>
+                </div>
+
+                <div class="section-title">
+                    <i class="section-title-icon fas fa-chart-line"></i>
+                    Análise de Vendas e Previsão
+                </div>
+
+                <div class="chart-container">
+                    <canvas id="salesChart"></canvas>
+                </div>
+
+                <div class="section-title">
+                    <i class="section-title-icon fas fa-dollar-sign"></i>
+                    Oportunidades de Compra
+                </div>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Cód Item</th>
+                                <th>Descrição</th>
+                                <th>Categoria</th>
+                                <th>Tipo Oportunidade</th>
+                                <th>Preço Médio</th>
+                                <th>Preço Atual</th>
+                                <th>Economia Potencial</th>
+                                <th>Qtd Sugerida</th>
+                                <th>Fornecedor</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabelaOportunidades">
+                            <!-- Dados serão carregados dinamicamente -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Página: Sugestões de Compra -->
+            <div class="page" id="page-sugestoes-compra">
+                <h1 class="page-title">Sugestões de Compra</h1>
+
+                <!-- Indicador de loading específico -->
+                <div id="loading-sugestoes" class="loading">
+                    <div class="loading-spinner"></div>
+                    <div class="loading-text">Carregando sugestões de compra...</div>
+                </div>
+
+                <div class="filters">
+                    <div class="filter-group">
+                        <label class="filter-label">Estabelecimento</label>
+                        <select id="filtroEstabelecimentoCompra">
+                            <option value="Todos">Todos</option>
+                            <option value="MATRIZ">MATRIZ</option>
+                            <option value="AFPNEUS">AFPNEUS</option>
+                            <option value="BNH">BNH</option>
+                            <option value="FILIAL 06">FILIAL 06</option>
+                            <option value="FL03 CORON">FL03 CORON</option>
+                            <option value="FL04 GUAR.">FL04 GUAR.</option>
+                            <option value="FL05 ITAP">FL05 ITAP</option>
+                            <option value="FL07">FL07</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label class="filter-label">Categoria</label>
+                        <select id="filtroCategoriaCompra">
+                            <option value="Todas">Todas</option>
+                            <option value="PNEUS">Pneus</option>
+                            <option value="LUBRIFICANTES/ADITIVOS">Lubrificantes/Aditivos</option>
+                            <option value="PEÇAS">Peças</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label class="filter-label">Status</label>
+                        <select id="filtroStatusCompra">
+                            <option value="Todos">Todos</option>
+                            <option value="Crítico">Crítico</option>
+                            <option value="Urgente">Urgente</option>
+                            <option value="Atenção">Atenção</option>
+                            <option value="Normal">Normal</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label class="filter-label">Pesquisar Item</label>
+                        <input type="text" id="pesquisaItem" placeholder="Código ou descrição...">
+                    </div>
+
+                    <button class="filter-button" id="btnAplicarFiltrosCompra">Aplicar</button>
+                </div>
+
+                <div class="tabs">
+                    <div class="tab active" data-tab="compraRegular">Regular</div>
+                    <div class="tab" data-tab="compraOportunidade">Oportunidades</div>
+                </div>
+
+                <div class="tab-content active" id="tab-compraRegular">
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Cód Item</th>
+                                    <th>Descrição</th>
+                                    <th>Categoria</th>
+                                    <th>Estabelecimento</th>
+                                    <th>Estoque Atual</th>
+                                    <th>Estoque Mínimo</th>
+                                    <th>Média Vendas (30d)</th>
+                                    <th>Previsão Vendas (30d)</th>
+                                    <th>Dias em Estoque</th>
+                                    <th>Sugestão de Compra</th>
+                                    <th>Melhor Fornecedor</th>
+                                    <th>Status</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabelaSugestoesCompra">
+                                <!-- Dados serão carregados dinamicamente -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="pagination" id="paginacaoCompras">
+                        <div class="pagination-item active">1</div>
+                        <div class="pagination-item">2</div>
+                        <div class="pagination-item">3</div>
+                        <div class="pagination-item">4</div>
+                    </div>
+                </div>
+
+                <div class="tab-content" id="tab-compraOportunidade">
+                    <div class="alert alert-info">
+                        <strong>Oportunidades de compra!</strong> Produtos com preços favoráveis ou com tendência de alta nos preços, recomendados para compra antecipada.
+                    </div>
+
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Cód Item</th>
+                                    <th>Descrição</th>
+                                    <th>Categoria</th>
+                                    <th>Tipo Oportunidade</th>
+                                    <th>Preço Médio</th>
+                                    <th>Preço Atual</th>
+                                    <th>Variação</th>
+                                    <th>Estoque Atual</th>
+                                    <th>Qtd Sugerida</th>
+                                    <th>Economia Potencial</th>
+                                    <th>Fornecedor</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabelaOportunidadesCompra">
+                                <!-- Dados serão carregados dinamicamente -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Página: Transferências -->
+            <div class="page" id="page-transferencias">
+                <h1 class="page-title">Transferências Recomendadas</h1>
+
+                <!-- Indicador de loading específico -->
+                <div id="loading-transferencias" class="loading">
+                    <div class="loading-spinner"></div>
+                    <div class="loading-text">Carregando transferências...</div>
+                </div>
+
+                <div class="filters">
+                    <div class="filter-group">
+                        <label class="filter-label">Origem</label>
+                        <select id="filtroOrigem">
+                            <option value="Todos">Todos</option>
+                            <option value="MATRIZ">MATRIZ</option>
+                            <option value="FILIAL 06">FILIAL 06</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label class="filter-label">Destino</label>
+                        <select id="filtroDestino">
+                            <option value="Todos">Todos</option>
+                            <option value="AFPNEUS">AFPNEUS</option>
+                            <option value="BNH">BNH</option>
+                            <option value="FL03 CORON">FL03 CORON</option>
+                            <option value="FL04 GUAR.">FL04 GUAR.</option>
+                            <option value="FL05 ITAP">FL05 ITAP</option>
+                            <option value="FL07">FL07</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label class="filter-label">Categoria</label>
+                        <select id="filtroCategoriaTransf">
+                            <option value="Todas">Todas</option>
+                            <option value="PNEUS">Pneus</option>
+                            <option value="LUBRIFICANTES/ADITIVOS">Lubrificantes/Aditivos</option>
+                            <option value="PEÇAS">Peças</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label class="filter-label">Status</label>
+                        <select id="filtroStatusTransf">
+                            <option value="Todos">Todos</option>
+                            <option value="Crítico">Crítico</option>
+                            <option value="Urgente">Urgente</option>
+                            <option value="Recomendado">Recomendado</option>
+                            <option value="Opcional">Opcional</option>
+                        </select>
+                    </div>
+
+                    <button class="filter-button" id="btnAplicarFiltrosTransf">Aplicar</button>
+                </div>
+
+                <div class="alert alert-warning">
+                    <strong>Nota:</strong> Apenas a MATRIZ pode transferir para todas as filiais. A FILIAL 06 transfere apenas pneus Michelin para outras unidades.
+                </div>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Cód Item</th>
+                                <th>Descrição</th>
+                                <th>Categoria</th>
+                                <th>Origem</th>
+                                <th>Estoque Origem</th>
+                                <th>Destino</th>
+                                <th>Estoque Destino</th>
+                                <th>Qtd Sugerida</th>
+                                <th>Dias Cobertura</th>
+                                <th>Status</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabelaTransferenciasCompleta">
+                            <!-- Dados serão carregados dinamicamente -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="pagination" id="paginacaoTransferencias">
+                    <div class="pagination-item active">1</div>
+                    <div class="pagination-item">2</div>
+                    <div class="pagination-item">3</div>
+                </div>
+            </div>
+
+            <!-- Página: Oportunidades -->
+            <div class="page" id="page-oportunidades">
+                <h1 class="page-title">Oportunidades de Compra</h1>
+
+                <!-- Indicador de loading específico -->
+                <div id="loading-oportunidades" class="loading">
+                    <div class="loading-spinner"></div>
+                    <div class="loading-text">Carregando oportunidades...</div>
+                </div>
+
+                <div class="filters">
+                    <div class="filter-group">
+                        <label class="filter-label">Categoria</label>
+                        <select id="filtroCategoriaOport">
+                            <option value="Todas">Todas</option>
+                            <option value="PNEUS">Pneus</option>
+                            <option value="LUBRIFICANTES/ADITIVOS">Lubrificantes/Aditivos</option>
+                            <option value="PEÇAS">Peças</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label class="filter-label">Tipo de Oportunidade</label>
+                        <select id="filtroTipoOport">
+                            <option value="Todos">Todos</option>
+                            <option value="Preço atual favorável">Preço atual favorável</option>
+                            <option value="Antecipação por tendência de alta">Tendência de alta</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label class="filter-label">Economia Mínima</label>
+                        <input type="number" id="filtroEconomiaMin" min="0" step="100" placeholder="R$ 0,00">
+                    </div>
+
+                    <button class="filter-button" id="btnAplicarFiltrosOport">Aplicar</button>
+                </div>
+
+                <div class="card-container">
+                    <div class="card">
+                        <div class="card-header">
+                            <i class="card-icon fas fa-dollar-sign"></i>
+                            Economia Potencial Total
+                        </div>
+                        <div class="stat">R$ 15.800,00</div>
+                        <p>Total de economia identificada nas oportunidades</p>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <i class="card-icon fas fa-chart-line fa-flip-vertical"></i>
+                            Preços Favoráveis
+                        </div>
+                        <div class="stat">8</div>
+                        <p>Produtos com preços abaixo da média histórica</p>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <i class="card-icon fas fa-chart-line"></i>
+                            Tendência de Alta
+                        </div>
+                        <div class="stat">5</div>
+                        <p>Produtos com tendência de aumento de preço</p>
+                    </div>
+                </div>
+
+                <div class="section-title">
+                    <i class="section-title-icon fas fa-dollar-sign"></i>
+                    Lista de Oportunidades
+                </div>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Cód Item</th>
+                                <th>Descrição</th>
+                                <th>Categoria</th>
+                                <th>Tipo Oportunidade</th>
+                                <th>Preço Médio</th>
+                                <th>Preço Atual</th>
+                                <th>Economia/%</th>
+                                <th>Estoque Atual</th>
+                                <th>Consumo Mensal</th>
+                                <th>Qtd Sugerida</th>
+                                <th>Economia Potencial</th>
+                                <th>Fornecedor</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabelaOportunidadesCompleta">
+                            <!-- Dados serão carregados dinamicamente -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Página: Análise de Fornecedores -->
+            <div class="page" id="page-fornecedores">
+                <h1 class="page-title">Análise de Fornecedores</h1>
+
+                <!-- Indicador de loading específico -->
+                <div id="loading-fornecedores" class="loading">
+                    <div class="loading-spinner"></div>
+                    <div class="loading-text">Carregando dados de fornecedores...</div>
+                </div>
+
+                <div class="filters">
+                    <div class="filter-group">
+                        <label class="filter-label">Fornecedor</label>
+                        <select id="filtroFornecedor">
+                            <option value="Todos">Todos</option>
+                            <option value="Distribuidor XYZ">Distribuidor XYZ</option>
+                            <option value="Continental Brasil">Continental Brasil</option>
+                            <option value="Auto Peças Distribuidora">Auto Peças Distribuidora</option>
+                            <option value="Castrol Distribuidora">Castrol Distribuidora</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label class="filter-label">Categoria</label>
+                        <select id="filtroCategoriaForn">
+                            <option value="Todas">Todas</option>
+                            <option value="PNEUS">Pneus</option>
+                            <option value="LUBRIFICANTES/ADITIVOS">Lubrificantes/Aditivos</option>
+                            <option value="PEÇAS">Peças</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label class="filter-label">Classificação</label>
+                        <select id="filtroClassificacao">
+                            <option value="Todos">Todos</option>
+                            <option value="Preferencial">Preferencial</option>
+                            <option value="Recomendado">Recomendado</option>
+                            <option value="Alternativo">Alternativo</option>
+                            <option value="Não Recomendado">Não Recomendado</option>
+                        </select>
+                    </div>
+
+                    <button class="filter-button" id="btnAplicarFiltrosForn">Aplicar</button>
+                </div>
+
+                <div class="section-title">
+                    <i class="section-title-icon fas fa-industry"></i>
+                    Comparativo de Fornecedores
+                </div>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Fornecedor</th>
+                                <th>Categorias</th>
+                                <th>Total Compras</th>
+                                <th>Preço Médio</th>
+                                <th>Prazo Entrega</th>
+                                <th>Última Compra</th>
+                                <th>Pontualidade</th>
+                                <th>Variação Preço</th>
+                                <th>Classificação</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabelaFornecedores">
+                            <!-- Dados serão carregados dinamicamente -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="section-title">
+                    <i class="section-title-icon fas fa-chart-bar"></i>
+                    Análise de Preços
+                </div>
+
+                <div class="chart-container">
+                    <canvas id="priceChart"></canvas>
+                </div>
+            </div>
+        </div>
     </div>
-  </header>
 
-  <div class="container">
-    <aside class="sidebar">
-      <div class="menu-item active" data-page="dashboard">📊 Dashboard</div>
-      <div class="menu-item" data-page="sugestoes">🛒 Sugestões</div>
-      <div class="menu-item" data-page="transferencias">🔄 Transferências</div>
-      <div class="menu-item" data-page="oportunidades">💰 Oportunidades</div>
-      <div class="menu-item" data-page="fornecedores">🏭 Fornecedores</div>
-    </aside>
-
-    <main class="main-content" id="main-content">
-      <!-- Conteúdo carregado dinamicamente -->
-    </main>
-  </div>
-
-  <div class="modal" id="modalLoading">
-    <div class="modal-content">
-      <h2>🔄 Carregando...</h2>
+    <!-- Modal de Detalhes do Item -->
+    <div class="modal" id="modalDetalhesItem">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Detalhes do Item</div>
+                <div class="modal-close">&times;</div>
+            </div>
+            <div class="modal-body" id="modalDetalhesItemBody">
+                <!-- Conteúdo carregado dinamicamente -->
+            </div>
+            <div class="modal-footer">
+                <button class="action-btn" onclick="App.closeModal('modalDetalhesItem')">Fechar</button>
+                <button class="action-btn green">Gerar Pedido</button>
+            </div>
+        </div>
     </div>
-  </div>
 
-  <script src="google-sheets-connector.js"></script>
-  <script src="script.js"></script>
+    <!-- Scripts -->
+    <script src="google-sheets-connector.js"></script>
+    <script src="app.js"></script>
 </body>
 </html>
