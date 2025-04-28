@@ -4,7 +4,7 @@
  */
 const GoogleSheetsConnector = {
     // Substitua pelo ID de implantação do seu script
-    urlBase: 'https://script.google.com/macros/s/AKfycbw6TLV1Kh5W2meftLDN_fQxwvmerRRvvn5E1kiKsGO6uZ6p_kfdsfQpDWsYnxYg2Oou6Q/exec',
+    urlBase: 'https://script.google.com/macros/s/AKfycbw69gc56quiz0Spol5bbXFVHlDF_NujoUtPyIOD-be4Phv6KuCnBSicgR0kCACUyvJC/exec',
     
     /**
      * Inicializa o conector, verificando a conectividade
