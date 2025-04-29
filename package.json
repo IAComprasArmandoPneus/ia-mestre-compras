@@ -1,7 +1,13 @@
 {
-  "name": "ia-mestre-compras-api",
+  "name": "ia-mestre-compras",
   "version": "1.0.0",
+  "type": "module",
   "scripts": {
-    "start": "node server.js"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "googleapis": "^105.0.0"
   }
 }
