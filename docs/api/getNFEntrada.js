@@ -1,7 +1,7 @@
 // /api/getNFEntrada.js
 
 import { google } from 'googleapis';
-import { auth } from '../../utils/googleAuth';
+import { auth } from '../googleAuth';
 
 const CACHE_TTL_MS = 60 * 1000; // cache de 1 minuto
 let nfCache = { timestamp: 0, data: null };
