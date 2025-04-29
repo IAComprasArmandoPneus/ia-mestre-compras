@@ -1,14 +1,37 @@
 // /api/getOportunidadesCompra.js
-import { getEstoque, getVendas } from "../../utils/sheets";
+import { google } from 'googleapis';
+import { auth } from '../googleAuth'; // ou '../script/googleAuth' se estiver no docs/script
 
 export default async function handler(req, res) {
   try {
-    const estoque = await getEstoque();
-    const vendas = await getVendas();
+    const sheets = google.sheets({ version: 'v4', auth });
 
-    if (!estoque || !vendas) {
-      return res.status(500).json({ status: 'error', message: 'Erro ao carregar dados.' });
+    const spreadsheetId = process.env.SHEET_ID;
+
+    // Buscar dados de Estoque
+    const estoqueResponse = await sheets.spreadsheets.values.get({
+      spreadsheetId,
+      range: 'EstoquePorEstabelecimentoIA!A1:Z',
+    });
+
+    const [estoqueHeader, ...estoqueRows] = estoqueResponse.data.values || [];
+
+    if (!estoqueHeader || estoqueRows.length === 0) {
+      return res.status(404).json({ status: 'error', message: 'Sem dados de estoque encontrados.' });
     }
+
+    // Normalizar dados de estoque
+    const estoque = estoqueRows.map((row) => {
+      const obj = {};
+      estoqueHeader.forEach((col, idx) => {
+        let valor = row[idx] ?? '';
+        if (col.toLowerCase().includes('estoque') || col.toLowerCase().includes('quantidade')) {
+          valor = parseFloat(valor.replace(',', '.')) || 0;
+        }
+        obj[col] = valor;
+      });
+      return obj;
+    });
 
     const oportunidades = [];
 
@@ -16,13 +39,14 @@ export default async function handler(req, res) {
       const codItem = produto['Cód Item'];
       const estoqueAtual = produto['Estoque Atual'] || 0;
 
-      // Simular preço médio histórico e preço atual
+      // 🧠 Simula inteligência de preço
       const precoMedio = gerarPrecoMedioAleatorio();
       const precoAtual = gerarPrecoAtualAleatorio(precoMedio);
 
       const economiaPercentual = precoMedio > 0 ? ((precoMedio - precoAtual) / precoMedio) * 100 : 0;
 
-      if (economiaPercentual > 5) { // Só oportunidades com economia acima de 5%
+      // 🔥 Critério de oportunidade: economia acima de 5%
+      if (economiaPercentual > 5) {
         oportunidades.push({
           'Cód Item': codItem,
           'Item': produto['Item'],
@@ -32,26 +56,26 @@ export default async function handler(req, res) {
           'Preço Atual': precoAtual.toFixed(2),
           'Economia/%': `${economiaPercentual.toFixed(1)}%`,
           'Qtd Sugerida': Math.max(2, Math.round(Math.random() * 5)),
-          'Melhor Fornecedor': '-', // Pode ser integrado depois
+          'Melhor Fornecedor': '-', // Pode integrar com dados reais depois
         });
       }
     });
 
-    res.status(200).json({ status: 'success', data: oportunidades });
+    return res.status(200).json({ status: 'success', data: oportunidades });
 
   } catch (error) {
-    console.error("Erro em getOportunidadesCompra:", error);
-    res.status(500).json({ status: 'error', message: error.message });
+    console.error("Erro em getOportunidadesCompra:", error.message);
+    return res.status(500).json({ status: 'error', message: error.message });
   }
 }
 
-// Simula preços médios
+// 📈 Simula Preço Médio
 function gerarPrecoMedioAleatorio() {
-  return Math.random() * (500 - 100) + 100; // Entre R$100 e R$500
+  return Math.random() * (500 - 100) + 100; // De R$100 até R$500
 }
 
-// Simula preços atuais com variação
+// 📉 Simula Preço Atual com variação controlada
 function gerarPrecoAtualAleatorio(precoMedio) {
-  const variacao = (Math.random() * 0.15) - 0.05; // -5% a +10%
+  const variacao = (Math.random() * 0.15) - 0.05; // Varia de -5% até +10%
   return precoMedio * (1 + variacao);
 }
