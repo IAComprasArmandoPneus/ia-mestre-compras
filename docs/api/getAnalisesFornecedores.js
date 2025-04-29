@@ -1,5 +1,5 @@
 // /api/getAnalisesFornecedores.js
-import { getNFEntrada } from "../../utils/sheets";
+import { auth } from '../googleAuth';
 
 export default async function handler(req, res) {
   try {
