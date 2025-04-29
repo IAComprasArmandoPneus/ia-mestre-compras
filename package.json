@@ -1,0 +1,7 @@
+{
+  "name": "ia-mestre-compras-api",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "node server.js"
+  }
+}
