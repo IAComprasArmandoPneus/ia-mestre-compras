@@ -1,70 +1,85 @@
 // /api/getRecomendacoes.js
-import { getEstoque, getVendas } from "../../utils/sheets";
+import { google } from 'googleapis';
+import { auth } from '../../utils/googleAuth';
+
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 min
+let cache = { ts: 0, data: null };
 
 export default async function handler(req, res) {
-  try {
-    const estoque = await getEstoque();
-    const vendas = await getVendas();
+  if (req.method !== 'GET') {
+    return res.status(405).json({ status: 'error', message: 'Method not allowed' });
+  }
 
-    if (!estoque || !vendas) {
-      return res.status(500).json({ status: 'error', message: 'Erro ao carregar dados.' });
+  const spreadsheetId = process.env.SHEET_ID;
+  if (!spreadsheetId) {
+    return res.status(500).json({ status: 'error', message: 'SHEET_ID não configurado' });
+  }
+
+  // Paginação opcional
+  const { limit = 1000, offset = 0, status: statusFilter } = req.query;
+
+  // Retorna do cache se ainda válido
+  if (Date.now() - cache.ts < CACHE_TTL_MS && cache.data) {
+    return res.status(200).json({ status: 'success', data: paginate(filterStatus(cache.data, statusFilter), offset, limit) });
+  }
+
+  try {
+    const sheets = google.sheets({ version: 'v4', auth });
+    const range = 'Sugestao_IA!A1:Z';
+
+    const resp = await sheets.spreadsheets.values.get({ spreadsheetId, range });
+    const [header, ...rows] = resp.data.values || [];
+
+    if (!header || rows.length === 0) {
+      return res.status(404).json({ status: 'error', message: 'Nenhuma sugestão de compra encontrada.' });
     }
 
-    // Funções auxiliares
-    const calcularGiroDiario = (itemCod) => {
-      const vendasItem = vendas.filter(v => v['Cód Item'] == itemCod);
-      if (vendasItem.length === 0) return 0;
+    // Pré-processa índices
+    const idx = header.reduce((acc, col, i) => {
+      const key = col.trim().toLowerCase();
+      if (key === 'qtd sugerida')       acc.qtdSug = i;
+      if (key === 'status')             acc.status = i;
+      acc.cols[i] = col;
+      return acc;
+    }, { cols: [] });
 
-      const vendasTotal = vendasItem.reduce((sum, venda) => sum + (venda['Quantidade Total'] || 0), 0);
-      const diasPeriodo = 180;
-      return vendasTotal / diasPeriodo;
-    };
-
-    const calcularEstoqueMinimo = (giroDiario) => {
-      const diasProtecao = 15;
-      return Math.ceil(giroDiario * diasProtecao);
-    };
-
-    const recomendacoes = [];
-
-    estoque.forEach(produto => {
-      const codItem = produto['Cód Item'];
-      const estoqueAtual = produto['Estoque Atual'] || 0;
-      const giroDiario = calcularGiroDiario(codItem);
-      const estoqueMinimo = calcularEstoqueMinimo(giroDiario);
-
-      if (estoqueAtual < estoqueMinimo) {
-        const qtdSugerida = Math.max(estoqueMinimo - estoqueAtual, 1);
-
-        recomendacoes.push({
-          'Cód Item': codItem,
-          'Item': produto['Item'],
-          'Categoria': produto['Categoria'],
-          'Estabelecimento': produto['Nome Estabelecimento'],
-          'Estoque Atual': estoqueAtual,
-          'Estoque Mínimo': estoqueMinimo,
-          'Média Vendas (30d)': Math.round(giroDiario * 30),
-          'Previsão Vendas (30d)': Math.round(giroDiario * 30),
-          'Dias em Estoque': giroDiario > 0 ? Math.round(estoqueAtual / giroDiario) : 'N/D',
-          'Qtd Sugerida': qtdSugerida,
-          'Melhor Fornecedor': '-', // Pode preencher depois puxando fornecedores
-          'Status': determinarStatus(estoqueAtual, estoqueMinimo)
-        });
-      }
+    const recomendacoes = rows.map(row => {
+      const item = {};
+      header.forEach((col, i) => {
+        let val = row[i] ?? '';
+        if (i === idx.qtdSug) val = parseFloat(val.replace(',', '.')) || 0;
+        // ... outros tratamentos específicos
+        item[toCamelCase(col)] = val;
+      });
+      return item;
     });
 
-    res.status(200).json({ status: 'success', data: recomendacoes });
+    // Filtra e ordena
+    let valid = filterStatus(recomendacoes, statusFilter);
+    valid.sort((a, b) => prioridade[a.status] - prioridade[b.status]);
 
-  } catch (error) {
-    console.error("Erro em getRecomendacoes:", error);
-    res.status(500).json({ status: 'error', message: error.message });
+    // Atualiza cache
+    cache = { ts: Date.now(), data: valid };
+
+    // Retorna com paginação
+    const paged = paginate(valid, offset, limit);
+    res.status(200).json({ status: 'success', data: paged });
+  } catch (err) {
+    console.error('Erro em getRecomendacoes.js:', err);
+    res.status(500).json({ status: 'error', message: err.message });
   }
 }
 
-// Função para determinar o status
-function determinarStatus(estoqueAtual, estoqueMinimo) {
-  if (estoqueAtual <= 0) return 'Crítico';
-  if (estoqueAtual < estoqueMinimo / 2) return 'Urgente';
-  if (estoqueAtual < estoqueMinimo) return 'Atenção';
-  return 'Normal';
+// Helpers:
+const prioridade = { 'Crítico': 1, 'Urgente': 2, 'Atenção': 3 };
+function filterStatus(arr, statusFilter) {
+  if (!statusFilter) return arr;
+  const filtros = statusFilter.split(',');
+  return arr.filter(item => filtros.includes(item.status));
+}
+function paginate(arr, offset, limit) {
+  return arr.slice(Number(offset), Number(offset) + Number(limit));
+}
+function toCamelCase(str) {
+  return str.toLowerCase().replace(/[^a-z0-9]+(.)/g, (_, c) => c.toUpperCase());
 }
