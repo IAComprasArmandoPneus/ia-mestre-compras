@@ -1,7 +1,7 @@
 // /api/getEstoque.js
 
 import { google } from 'googleapis';
-import { auth } from '../../utils/googleAuth';
+import { auth } from '../googleAuth';
 
 const CACHE_TTL_MS = 60 * 1000; // 1 minuto de cache em memória
 let estoqueCache = { timestamp: 0, data: null };
